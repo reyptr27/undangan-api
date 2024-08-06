@@ -1,5 +1,4 @@
 {
-    "version": 2,
     "functions": {
         "api/*.php": {
             "runtime": "vercel-php@0.6.2",
@@ -7,29 +6,6 @@
             "maxDuration": 10
         }
     },
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/api/index.php"
-        }
-    ],
-    "headers": [
-        {
-            "source": "/api/(.*)",
-            "headers": [
-                { "key": "Access-Control-Allow-Credentials", "value": "true" },
-                { "key": "Access-Control-Allow-Origin", "value": "*" },
-                {
-                    "key": "Access-Control-Allow-Methods",
-                    "value": "GET, OPTIONS, POST, PUT, DELETE"
-                },
-                {
-                    "key": "Access-Control-Allow-Headers",
-                    "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
-                }
-            ]
-        }
-    ],
     "routes": [
         {
             "src": "/favicon.ico",
@@ -58,6 +34,10 @@
                 "Cache-Control": "public, max-age=86400, immutable"
             },
             "dest": "/public/$1/$2"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/api/index.php"
         }
     ]
 }
