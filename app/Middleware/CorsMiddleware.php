@@ -9,55 +9,33 @@ use Core\Middleware\MiddlewareInterface;
 
 final class CorsMiddleware implements MiddlewareInterface
 {
-    private $allowedOrigins = [
-        'https://reynaldo-youang-wedding.online',
-        'https://reynaldo-youang-wedding.netlify.app'
-        // Add other allowed origins here
-    ];
-
     public function handle(Request $request, Closure $next)
     {
-        if (!$request->ajax() && !$request->method(Request::OPTIONS)) {
-            return $next($request);
+        // Handle preflight requests
+        if ($request->method() === 'OPTIONS') {
+            $header = respond()->getHeader();
+            $header->set('Access-Control-Allow-Origin', '*'); // or specify your domain
+            $header->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            $header->set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Content-Type, Authorization');
+            $header->set('Access-Control-Max-Age', '86400'); // Cache preflight response
+
+            return respond()->setCode(Respond::HTTP_NO_CONTENT); // Return 204 No Content for preflight
         }
 
-        $header = respond()->getHeader();
+        // Handle normal requests
+        $response = $next($request);
 
-        // Check if the Origin is allowed
-        $origin = $request->server->get('HTTP_ORIGIN');
-        if (in_array($origin, $this->allowedOrigins)) {
-            $header->set('Access-Control-Allow-Origin', $origin);
-        } else {
-            $header->set('Access-Control-Allow-Origin', '');
-        }
-
+        // Set CORS headers on the response
+        $header = $response->getHeader();
+        $header->set('Access-Control-Allow-Origin', '*'); // or specify your domain
         $header->set('Access-Control-Allow-Credentials', 'true');
         $header->set('Access-Control-Expose-Headers', 'Authorization, Content-Type, Cache-Control, Content-Disposition');
 
+        // Ensure proper handling of varying headers
         $vary = $header->has('Vary') ? explode(', ', $header->get('Vary')) : [];
         $vary = array_unique([...$vary, 'Accept', 'Origin', 'User-Agent', 'Access-Control-Request-Method', 'Access-Control-Request-Headers']);
         $header->set('Vary', join(', ', $vary));
 
-        if (!$request->method(Request::OPTIONS)) {
-            return $next($request);
-        }
-
-        $header->unset('Content-Type');
-
-        if (!$request->server->has('HTTP_ACCESS_CONTROL_REQUEST_METHOD')) {
-            return respond()->setCode(Respond::HTTP_NO_CONTENT);
-        }
-
-        $header->set(
-            'Access-Control-Allow-Methods',
-            strtoupper($request->server->get('HTTP_ACCESS_CONTROL_REQUEST_METHOD', $request->method()))
-        );
-
-        $header->set(
-            'Access-Control-Allow-Headers',
-            $request->server->get('HTTP_ACCESS_CONTROL_REQUEST_HEADERS', 'Origin, Content-Type, Accept, Authorization, Accept-Language')
-        );
-
-        return respond()->setCode(Respond::HTTP_NO_CONTENT);
+        return $response;
     }
 }
